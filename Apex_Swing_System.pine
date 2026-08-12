@@ -1,0 +1,866 @@
+//@version=6
+indicator(
+     "Apex Swing System",
+     shorttitle = "APEX",
+     overlay = true,
+     max_labels_count = 500,
+     max_lines_count = 500
+)
+
+// ═════════════════════════════════════════════════════════════════════════════
+// APEX SWING SYSTEM
+// Version: 1.0.0
+//
+// Core:
+// • SMA 200 Trend
+// • RSI Momentum
+// • Ichimoku Confirmation
+// • Fixed Entry
+// • Fixed Stop Loss
+// • Fixed TP1 / TP2 / TP3
+// • Risk / Reward
+// • Dashboard
+// • Alerts
+//
+// NOTE:
+// This is an analytical/educational indicator.
+// It does not guarantee future price movement or trading performance.
+// ═════════════════════════════════════════════════════════════════════════════
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 01. INPUTS
+// ═════════════════════════════════════════════════════════════════════════════
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Trend
+// ─────────────────────────────────────────────────────────────────────────────
+
+groupTrend = "01 • Trend"
+
+smaLength = input.int(
+     200,
+     "SMA Length",
+     minval = 1,
+     group = groupTrend
+)
+
+useSmaFilter = input.bool(
+     true,
+     "Use SMA 200 Filter",
+     group = groupTrend
+)
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Momentum
+// ─────────────────────────────────────────────────────────────────────────────
+
+groupMomentum = "02 • Momentum"
+
+rsiLength = input.int(
+     14,
+     "RSI Length",
+     minval = 1,
+     group = groupMomentum
+)
+
+rsiBullLevel = input.float(
+     50.0,
+     "Bullish RSI Level",
+     minval = 0,
+     maxval = 100,
+     group = groupMomentum
+)
+
+rsiBearLevel = input.float(
+     50.0,
+     "Bearish RSI Level",
+     minval = 0,
+     maxval = 100,
+     group = groupMomentum
+)
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Ichimoku
+// ─────────────────────────────────────────────────────────────────────────────
+
+groupIchimoku = "03 • Ichimoku"
+
+conversionLength = input.int(
+     9,
+     "Conversion Length",
+     minval = 1,
+     group = groupIchimoku
+)
+
+baseLength = input.int(
+     26,
+     "Base Length",
+     minval = 1,
+     group = groupIchimoku
+)
+
+spanBLength = input.int(
+     52,
+     "Span B Length",
+     minval = 1,
+     group = groupIchimoku
+)
+
+displacement = input.int(
+     26,
+     "Displacement",
+     minval = 1,
+     group = groupIchimoku
+)
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Risk / Targets
+// ─────────────────────────────────────────────────────────────────────────────
+
+groupRisk = "04 • Risk & Targets"
+
+atrLength = input.int(
+     14,
+     "ATR Length",
+     minval = 1,
+     group = groupRisk
+)
+
+stopAtrMultiplier = input.float(
+     1.5,
+     "Stop Loss ATR Multiplier",
+     minval = 0.1,
+     step = 0.1,
+     group = groupRisk
+)
+
+target1RR = input.float(
+     1.0,
+     "Target 1 R:R",
+     minval = 0.1,
+     step = 0.1,
+     group = groupRisk
+)
+
+target2RR = input.float(
+     2.0,
+     "Target 2 R:R",
+     minval = 0.1,
+     step = 0.1,
+     group = groupRisk
+)
+
+target3RR = input.float(
+     3.0,
+     "Target 3 R:R",
+     minval = 0.1,
+     step = 0.1,
+     group = groupRisk
+)
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Display
+// ─────────────────────────────────────────────────────────────────────────────
+
+groupDisplay = "05 • Display"
+
+showSMA = input.bool(
+     true,
+     "Show SMA 200",
+     group = groupDisplay
+)
+
+showIchimoku = input.bool(
+     true,
+     "Show Ichimoku Cloud",
+     group = groupDisplay
+)
+
+showTradeLevels = input.bool(
+     true,
+     "Show Trade Levels",
+     group = groupDisplay
+)
+
+showDashboard = input.bool(
+     true,
+     "Show Dashboard",
+     group = groupDisplay
+)
+
+showSignals = input.bool(
+     true,
+     "Show Buy/Sell Signals",
+     group = groupDisplay
+)
+
+showStatus = input.bool(
+     true,
+     "Show Setup Status",
+     group = groupDisplay
+)
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 02. INDICATOR CALCULATIONS
+// ═════════════════════════════════════════════════════════════════════════════
+
+// SMA
+sma200 = ta.sma(close, smaLength)
+
+// RSI
+rsi = ta.rsi(close, rsiLength)
+
+// ATR
+atr = ta.atr(atrLength)
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 03. ICHIMOKU ENGINE
+// ═════════════════════════════════════════════════════════════════════════════
+
+donchian(len) =>
+    (ta.highest(high, len) + ta.lowest(low, len)) / 2.0
+
+conversionLine = donchian(conversionLength)
+baseLine = donchian(baseLength)
+leadingSpanA = (conversionLine + baseLine) / 2.0
+leadingSpanB = donchian(spanBLength)
+
+// Current cloud values.
+// We use the current calculated cloud boundaries for confirmation.
+cloudTop = math.max(leadingSpanA, leadingSpanB)
+cloudBottom = math.min(leadingSpanA, leadingSpanB)
+
+priceAboveCloud = close > cloudTop
+priceBelowCloud = close < cloudBottom
+
+ichimokuBullish = priceAboveCloud and conversionLine > baseLine
+ichimokuBearish = priceBelowCloud and conversionLine < baseLine
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 04. TREND ENGINE
+// ═════════════════════════════════════════════════════════════════════════════
+
+bullTrend = close > sma200
+bearTrend = close < sma200
+
+trendBull = useSmaFilter ? bullTrend : true
+trendBear = useSmaFilter ? bearTrend : true
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 05. MOMENTUM ENGINE
+// ═════════════════════════════════════════════════════════════════════════════
+
+momentumBull = rsi > rsiBullLevel
+momentumBear = rsi < rsiBearLevel
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 06. CONFIRMATION ENGINE
+// ═════════════════════════════════════════════════════════════════════════════
+
+bullConfirmation =
+     trendBull and
+     momentumBull and
+     ichimokuBullish
+
+bearConfirmation =
+     trendBear and
+     momentumBear and
+     ichimokuBearish
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 07. SIGNAL ENGINE
+// ═════════════════════════════════════════════════════════════════════════════
+
+// Signals are confirmed on bar close.
+confirmedBar = barstate.isconfirmed
+
+rawBuySignal =
+     bullConfirmation and
+     not bullConfirmation[1]
+
+rawSellSignal =
+     bearConfirmation and
+     not bearConfirmation[1]
+
+buySignal =
+     confirmedBar and
+     rawBuySignal
+
+sellSignal =
+     confirmedBar and
+     rawSellSignal
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 08. TRADE STATE ENGINE
+// ═════════════════════════════════════════════════════════════════════════════
+
+// tradeDirection:
+//  1  = Long
+// -1  = Short
+//  0  = No active setup
+
+var bool tradeActive = false
+var int tradeDirection = 0
+
+var float entryPrice = na
+var float stopPrice = na
+var float target1Price = na
+var float target2Price = na
+var float target3Price = na
+
+var bool target1Hit = false
+var bool target2Hit = false
+var bool target3Hit = false
+
+var int setupBar = na
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 09. CREATE NEW LONG SETUP
+// ═════════════════════════════════════════════════════════════════════════════
+
+newLongSetup =
+     buySignal and
+     not tradeActive
+
+if newLongSetup
+    tradeActive := true
+    tradeDirection := 1
+
+    setupBar := bar_index
+
+    // FIXED ENTRY
+    entryPrice := close
+
+    // FIXED RISK
+    longRisk = atr * stopAtrMultiplier
+
+    stopPrice := entryPrice - longRisk
+
+    // FIXED TARGETS
+    target1Price := entryPrice + longRisk * target1RR
+    target2Price := entryPrice + longRisk * target2RR
+    target3Price := entryPrice + longRisk * target3RR
+
+    target1Hit := false
+    target2Hit := false
+    target3Hit := false
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 10. CREATE NEW SHORT SETUP
+// ═════════════════════════════════════════════════════════════════════════════
+
+newShortSetup =
+     sellSignal and
+     not tradeActive
+
+if newShortSetup
+    tradeActive := true
+    tradeDirection := -1
+
+    setupBar := bar_index
+
+    // FIXED ENTRY
+    entryPrice := close
+
+    // FIXED RISK
+    shortRisk = atr * stopAtrMultiplier
+
+    stopPrice := entryPrice + shortRisk
+
+    // FIXED TARGETS
+    target1Price := entryPrice - shortRisk * target1RR
+    target2Price := entryPrice - shortRisk * target2RR
+    target3Price := entryPrice - shortRisk * target3RR
+
+    target1Hit := false
+    target2Hit := false
+    target3Hit := false
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 11. ACTIVE TRADE MONITOR
+// ═════════════════════════════════════════════════════════════════════════════
+
+longStopHit =
+     tradeActive and
+     tradeDirection == 1 and
+     low <= stopPrice
+
+shortStopHit =
+     tradeActive and
+     tradeDirection == -1 and
+     high >= stopPrice
+
+
+longTarget1Reached =
+     tradeActive and
+     tradeDirection == 1 and
+     high >= target1Price
+
+longTarget2Reached =
+     tradeActive and
+     tradeDirection == 1 and
+     high >= target2Price
+
+longTarget3Reached =
+     tradeActive and
+     tradeDirection == 1 and
+     high >= target3Price
+
+
+shortTarget1Reached =
+     tradeActive and
+     tradeDirection == -1 and
+     low <= target1Price
+
+shortTarget2Reached =
+     tradeActive and
+     tradeDirection == -1 and
+     low <= target2Price
+
+shortTarget3Reached =
+     tradeActive and
+     tradeDirection == -1 and
+     low <= target3Price
+
+
+// Update target state.
+if tradeActive
+    if longTarget1Reached or shortTarget1Reached
+        target1Hit := true
+
+    if longTarget2Reached or shortTarget2Reached
+        target2Hit := true
+
+    if longTarget3Reached or shortTarget3Reached
+        target3Hit := true
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 12. TRADE COMPLETION
+// ═════════════════════════════════════════════════════════════════════════════
+
+// Final target closes the setup.
+// Stop loss also closes the setup.
+//
+// The levels are NEVER recalculated while the setup is active.
+
+finalTargetHit =
+     longTarget3Reached or
+     shortTarget3Reached
+
+stopHit =
+     longStopHit or
+     shortStopHit
+
+tradeClosed =
+     tradeActive and
+     (finalTargetHit or stopHit)
+
+if tradeClosed
+    tradeActive := false
+    tradeDirection := 0
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 13. RISK / REWARD ENGINE
+// ═════════════════════════════════════════════════════════════════════════════
+
+float currentRisk = na
+float currentReward = na
+float currentRR = na
+
+if tradeDirection == 1
+    currentRisk := entryPrice - stopPrice
+    currentReward := target3Price - entryPrice
+
+if tradeDirection == -1
+    currentRisk := stopPrice - entryPrice
+    currentReward := entryPrice - target3Price
+
+if not na(currentRisk) and currentRisk > 0
+    currentRR := currentReward / currentRisk
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 14. CHART VISUALIZATION
+// ═════════════════════════════════════════════════════════════════════════════
+
+// SMA
+plot(
+     showSMA ? sma200 : na,
+     title = "SMA 200",
+     linewidth = 2
+)
+
+
+// Ichimoku
+plot(
+     showIchimoku ? leadingSpanA : na,
+     title = "Ichimoku Span A",
+     offset = displacement
+)
+
+plot(
+     showIchimoku ? leadingSpanB : na,
+     title = "Ichimoku Span B",
+     offset = displacement
+)
+
+
+// Signals
+plotshape(
+     showSignals and newLongSetup,
+     title = "Apex Buy",
+     style = shape.labelup,
+     location = location.belowbar,
+     text = "APEX\nBUY",
+     size = size.small
+)
+
+plotshape(
+     showSignals and newShortSetup,
+     title = "Apex Sell",
+     style = shape.labeldown,
+     location = location.abovebar,
+     text = "APEX\nSELL",
+     size = size.small
+)
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 15. FIXED TRADE LEVELS
+// ═════════════════════════════════════════════════════════════════════════════
+
+plot(
+     showTradeLevels and tradeActive ? entryPrice : na,
+     title = "Fixed Entry",
+     linewidth = 2,
+     style = plot.style_linebr
+)
+
+plot(
+     showTradeLevels and tradeActive ? stopPrice : na,
+     title = "Fixed Stop Loss",
+     linewidth = 2,
+     style = plot.style_linebr
+)
+
+plot(
+     showTradeLevels and tradeActive ? target1Price : na,
+     title = "Fixed Target 1",
+     linewidth = 1,
+     style = plot.style_linebr
+)
+
+plot(
+     showTradeLevels and tradeActive ? target2Price : na,
+     title = "Fixed Target 2",
+     linewidth = 1,
+     style = plot.style_linebr
+)
+
+plot(
+     showTradeLevels and tradeActive ? target3Price : na,
+     title = "Fixed Target 3",
+     linewidth = 2,
+     style = plot.style_linebr
+)
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 16. TARGET / STOP VISUAL EVENTS
+// ═════════════════════════════════════════════════════════════════════════════
+
+plotshape(
+     showStatus and target1Hit and not target1Hit[1],
+     title = "Target 1 Hit",
+     style = shape.circle,
+     location = location.absolute,
+     y = target1Price,
+     text = "TP1",
+     size = size.tiny
+)
+
+plotshape(
+     showStatus and target2Hit and not target2Hit[1],
+     title = "Target 2 Hit",
+     style = shape.circle,
+     location = location.absolute,
+     y = target2Price,
+     text = "TP2",
+     size = size.tiny
+)
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 17. DASHBOARD
+// ═════════════════════════════════════════════════════════════════════════════
+
+var table dashboard = table.new(
+     position.top_right,
+     2,
+     10,
+     border_width = 1
+)
+
+if barstate.islast and showDashboard
+
+    // Header
+    table.cell(
+         dashboard,
+         0,
+         0,
+         "APEX SWING",
+         text_size = size.normal
+    )
+
+    table.cell(
+         dashboard,
+         1,
+         0,
+         "SYSTEM",
+         text_size = size.normal
+    )
+
+    // Market
+    marketState =
+         bullConfirmation ? "BULLISH" :
+         bearConfirmation ? "BEARISH" :
+         "NEUTRAL"
+
+    table.cell(
+         dashboard,
+         0,
+         1,
+         "Market"
+    )
+
+    table.cell(
+         dashboard,
+         1,
+         1,
+         marketState
+    )
+
+    // RSI
+    table.cell(
+         dashboard,
+         0,
+         2,
+         "RSI"
+    )
+
+    table.cell(
+         dashboard,
+         1,
+         2,
+         str.tostring(rsi, "#.##")
+    )
+
+    // SMA
+    table.cell(
+         dashboard,
+         0,
+         3,
+         "SMA 200"
+    )
+
+    table.cell(
+         dashboard,
+         1,
+         3,
+         close > sma200 ? "ABOVE" : "BELOW"
+    )
+
+    // Ichimoku
+    table.cell(
+         dashboard,
+         0,
+         4,
+         "Ichimoku"
+    )
+
+    table.cell(
+         dashboard,
+         1,
+         4,
+         ichimokuBullish ? "BULLISH" :
+         ichimokuBearish ? "BEARISH" :
+         "NEUTRAL"
+    )
+
+    // Setup
+    setupState =
+         tradeActive ?
+         (tradeDirection == 1 ? "LONG ACTIVE" : "SHORT ACTIVE") :
+         "WAITING"
+
+    table.cell(
+         dashboard,
+         0,
+         5,
+         "Setup"
+    )
+
+    table.cell(
+         dashboard,
+         1,
+         5,
+         setupState
+    )
+
+    // Entry
+    table.cell(
+         dashboard,
+         0,
+         6,
+         "Entry"
+    )
+
+    table.cell(
+         dashboard,
+         1,
+         6,
+         tradeActive ? str.tostring(entryPrice, format.mintick) : "-"
+    )
+
+    // SL
+    table.cell(
+         dashboard,
+         0,
+         7,
+         "Stop Loss"
+    )
+
+    table.cell(
+         dashboard,
+         1,
+         7,
+         tradeActive ? str.tostring(stopPrice, format.mintick) : "-"
+    )
+
+    // TP3
+    table.cell(
+         dashboard,
+         0,
+         8,
+         "Target 3"
+    )
+
+    table.cell(
+         dashboard,
+         1,
+         8,
+         tradeActive ? str.tostring(target3Price, format.mintick) : "-"
+    )
+
+    // R:R
+    table.cell(
+         dashboard,
+         0,
+         9,
+         "R:R"
+    )
+
+    table.cell(
+         dashboard,
+         1,
+         9,
+         tradeActive and not na(currentRR) ?
+         str.tostring(currentRR, "#.##") :
+         "-"
+    )
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 18. ALERTS
+// ═════════════════════════════════════════════════════════════════════════════
+
+alertcondition(
+     newLongSetup,
+     title = "Apex Bullish Setup",
+     message = "APEX SWING SYSTEM: Bullish setup confirmed."
+)
+
+alertcondition(
+     newShortSetup,
+     title = "Apex Bearish Setup",
+     message = "APEX SWING SYSTEM: Bearish setup confirmed."
+)
+
+alertcondition(
+     longTarget1Reached or shortTarget1Reached,
+     title = "Apex Target 1",
+     message = "APEX SWING SYSTEM: Target 1 reached."
+)
+
+alertcondition(
+     longTarget2Reached or shortTarget2Reached,
+     title = "Apex Target 2",
+     message = "APEX SWING SYSTEM: Target 2 reached."
+)
+
+alertcondition(
+     longTarget3Reached or shortTarget3Reached,
+     title = "Apex Target 3",
+     message = "APEX SWING SYSTEM: Target 3 reached."
+)
+
+alertcondition(
+     stopHit,
+     title = "Apex Stop Loss",
+     message = "APEX SWING SYSTEM: Stop Loss condition reached."
+)
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 19. STATUS LABEL
+// ═════════════════════════════════════════════════════════════════════════════
+
+if showStatus and newLongSetup
+    label.new(
+         bar_index,
+         low,
+         "🟢 APEX BUY\n" +
+         "Entry: " + str.tostring(entryPrice, format.mintick) +
+         "\nSL: " + str.tostring(stopPrice, format.mintick) +
+         "\nTP1: " + str.tostring(target1Price, format.mintick) +
+         "\nTP2: " + str.tostring(target2Price, format.mintick) +
+         "\nTP3: " + str.tostring(target3Price, format.mintick),
+         style = label.style_label_up,
+         textcolor = color.white
+    )
+
+if showStatus and newShortSetup
+    label.new(
+         bar_index,
+         high,
+         "🔴 APEX SELL\n" +
+         "Entry: " + str.tostring(entryPrice, format.mintick) +
+         "\nSL: " + str.tostring(stopPrice, format.mintick) +
+         "\nTP1: " + str.tostring(target1Price, format.mintick) +
+         "\nTP2: " + str.tostring(target2Price, format.mintick) +
+         "\nTP3: " + str.tostring(target3Price, format.mintick),
+         style = label.style_label_down,
+         textcolor = color.white
+    )
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// END — APEX SWING SYSTEM v1.0.0
+// ═════════════════════════════════════════════════════════════════════════════
