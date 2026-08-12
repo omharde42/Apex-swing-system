@@ -8,7 +8,8 @@ A powerful, clean and evolving TradingView indicator designed to bring **trend, 
 
 ## 📊 SEE APEX SWING SYSTEM IN ACTION
 
-**[PLACE THE TRADINGVIEW SCREENSHOT HERE]**
+<img width="2776" height="1404" alt="image" src="https://github.com/user-attachments/assets/f4984fab-293a-49b2-89da-e622faa5ee1a" />
+
 
 ### 🔥 Built for Clearer Market Analysis
 
