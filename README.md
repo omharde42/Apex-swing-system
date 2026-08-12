@@ -70,26 +70,22 @@ The objective is to keep the trade plan clear and consistent.
 
 ## 📈 DESIGNED TO EVOLVE
 
-### V1 — FOUNDATION
+**V1 - Current Repo**
 
-SMA 200 • RSI • Ichimoku • Signals • Fixed Levels • Dashboard
+**V2 — CURRENT FOUNDATION**
+ SMA 200 • RSI • Ichimoku • Signals • Fixed Levels • Dashboard
 
-### V2 — ADVANCED SWING
+**V3 — ADVANCED SWING**
+ Multi-Timeframe Analysis • Volatility • Trend Strength • Better Filtering
 
-Multi-Timeframe Analysis • Volatility • Trend Strength • Better Filtering
+**V4 — SCALP ENGINE**
+ Scalping Mode • Lower-Timeframe Confirmation • Fast Momentum Analysis
 
-### V3 — SCALP ENGINE
+**V5 — AI ANALYSIS**
+ AI-Assisted Market Analysis • Pattern Classification • Market Regime Detection
 
-Scalping Mode • Lower-Timeframe Confirmation • Fast Momentum Analysis
-
-### V4 — AI ANALYSIS
-
-AI-Assisted Market Analysis • Pattern Classification • Market Regime Detection
-
-### V5 — ALL-IN-ONE APEX
-
-Swing • Scalping • Intraday • Risk Management • Target Engine • AI
-
+**V6 — ALL-IN-ONE APEX**
+ Swing • Scalping • Intraday • Risk Management • Target Engine • AI
 ---
 
 ## 📱 MOBILE-FIRST VISION
