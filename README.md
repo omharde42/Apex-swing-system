@@ -33,7 +33,11 @@ Bullish / Bearish Setup Detection
 Fixed Entry • Stop Loss • Targets
 
 **Dashboard**
-Market Status • Trend • Momentum • Risk/Reward
+Market Status • Trend • Momentum • Risk/Reward 
+
+**Image Advertising** 
+<img width="1024" height="1536" alt="ChatGPT Image Aug 12, 2026, 11_28_58 PM" src="https://github.com/user-attachments/assets/2edaa4e5-7fef-40cf-8eb7-f259c9aef1e0" />
+
 
 ---
 
