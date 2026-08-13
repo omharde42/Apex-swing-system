@@ -1,0 +1,131 @@
+text_color=entryColor,
+         bgcolor=panelColor)
+
+    table.cell(dashboard, 0, 14, "SL / T1 / T2 / T3", text_color=mutedColor, bgcolor=panelColor)
+    table.cell(
+         dashboard, 1, 14,
+         na(stopPrice) ?
+         "—" :
+         str.tostring(stopPrice, format.mintick) + " / " +
+         str.tostring(target1, format.mintick) + " / " +
+         str.tostring(target2, format.mintick) + " / " +
+         str.tostring(target3, format.mintick),
+         text_color=textColor,
+         bgcolor=panelColor)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SPEEDOMETER
+// ─────────────────────────────────────────────────────────────────────────────
+
+var table gauge = table.new(
+     position.bottom_right,
+     7,
+     6,
+     bgcolor=panelColor,
+     frame_color=borderColor,
+     frame_width=2,
+     border_color=borderColor,
+     border_width=1)
+
+if barstate.islast and showGauge
+
+    gaugeColor =
+         bullSignal ? bullColor :
+         bearSignal ? bearColor :
+         neutralColor
+
+    gaugeText =
+         bullSignal ? "▲ BUY" :
+         bearSignal ? "▼ SELL" :
+         "◆ WAIT"
+
+    table.cell(
+         gauge,
+         0,
+         0,
+         "APEX SIGNAL",
+         text_color=textColor,
+         bgcolor=headerColor,
+         text_size=size.large)
+
+    table.merge_cells(gauge, 0, 0, 6, 0)
+
+    table.cell(gauge, 0, 1, "SELL", text_color=bearColor, bgcolor=panelColor)
+    table.cell(gauge, 1, 1, "20", text_color=mutedColor, bgcolor=panelColor)
+    table.cell(gauge, 2, 1, "40", text_color=mutedColor, bgcolor=panelColor)
+    table.cell(gauge, 3, 1, "50", text_color=neutralColor, bgcolor=panelColor)
+    table.cell(gauge, 4, 1, "60", text_color=mutedColor, bgcolor=panelColor)
+    table.cell(gauge, 5, 1, "80", text_color=mutedColor, bgcolor=panelColor)
+    table.cell(gauge, 6, 1, "BUY", text_color=bullColor, bgcolor=panelColor)
+
+    gaugePosition = int(math.round(signalStrength / 100.0 * 6.0))
+    gaugePosition := math.max(0, math.min(6, gaugePosition))
+
+    for i = 0 to 6
+
+        cellColor =
+             i < 3 ?
+             color.new(bearColor, 65) :
+             i == 3 ?
+             color.new(neutralColor, 55) :
+             color.new(bullColor, 65)
+
+        marker =
+             i == gaugePosition ?
+             "●" :
+             "━"
+
+        table.cell(
+             gauge,
+             i,
+             2,
+             marker,
+             text_color=i == gaugePosition ? gaugeColor : mutedColor,
+             bgcolor=cellColor,
+             text_size=size.large)
+
+    table.cell(
+         gauge,
+         0,
+         3,
+         gaugeText,
+         text_color=gaugeColor,
+         bgcolor=panelColor,
+         text_size=size.huge)
+
+    table.merge_cells(gauge, 0, 3, 6, 3)
+
+    table.cell(
+         gauge,
+         0,
+         4,
+         str.tostring(signalStrength) + " / 100",
+         text_color=gaugeColor,
+         bgcolor=panelColor,
+         text_size=size.large)
+
+    table.merge_cells(gauge, 0, 4, 6, 4)
+
+    table.cell(
+         gauge,
+         0,
+         5,
+         regimeText,
+         text_color=gaugeColor,
+         bgcolor=panelColor)
+
+    table.merge_cells(gauge, 0, 5, 6, 5)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ALERTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+alertcondition(
+     newBuy,
+     title="Apex V2 BUY",
+     message="APEX V2 BUY: New fixed Entry, SL and Targets generated.")
+
+alertcondition(
+     newSell,
+     title="Apex V2 SELL",
+     message="APEX V2 SELL: New fixed Entry, SL and Targets generated.")
